@@ -91,7 +91,14 @@ client.on("guildMemberAdd", async (member) => {
             }catch(err){
                 client.channels.cache.get(logChannelID).send(`<@847442076911534171> failed to kick ${member.user.tag} (${member.id})`);
             }
-            client.channels.cache.get(logChannelID).send(`kicked ${member.user.tag} (${member.id}) who joined using a brand new invite! Check the Audit Logs!`);
+            const faildInviteEmbedLog = new Discord.MessageEmbed()
+            .setTitle(`⚠ Non-Partner Join from New Invite`)
+            .setDescription(`kicked ${member.user.tag} (${member.id}) who joined using a brand new invite! Check the Audit Logs!`)
+            .setImage('https://cdn.discordapp.com/attachments/756644176795533334/847276996564353054/Embed_width.png')
+            .setColor('#e6d03c')
+            .setTimestamp()
+            .setFooter('Attempted:');
+            client.channels.cache.get(logChannelID).send(faildInviteEmbedLog);
        }
     }else{
         member.roles.add('847442832985423872')

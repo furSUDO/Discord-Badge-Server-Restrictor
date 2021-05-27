@@ -1,3 +1,16 @@
+const ServerType = 'PARTNERED_SERVER_OWNER'
+/* 
+    Set ServerType to one of the values from https://discord.com/developers/docs/resources/user#user-object-user-flags
+    Eg;
+        Partner Only Server: PARTNERED_SERVER_OWNER
+        Certified Moderator Only Server: DISCORD_CERTIFIED_MODERATOR
+*/
+
+
+const logChannelID = '847531207482802176' 
+//The ID of the channel where you'd like faild joins to be displayed
+
+//Required Stuff
 const fs = require('fs');
 const { Client } = require('discord.js');
 const Discord = require('discord.js');
@@ -6,11 +19,12 @@ const { prefix, token } = require('./config.json');
 const guildInvites = new Map();
 const wait = require('util').promisify(setTimeout);
 
+//Cooldowns and commands collections
 client.commands = new Discord.Collection();
 client.cooldowns = new Discord.Collection();
 
+//Command Handler
 const commandFolders = fs.readdirSync('./commands');
-
 for (const folder of commandFolders) {
 	const commandFiles = fs.readdirSync(`./commands/${folder}`).filter(file => file.endsWith('.js'));
 	for (const file of commandFiles) {
@@ -18,6 +32,8 @@ for (const folder of commandFolders) {
 		client.commands.set(command.name, command);
 	}
 }
+
+//Invite Tracker
 client.on('inviteCreate', async invite => guildInvites.set(invite.guild.id,await invite.guild.fetchInvites()))
 client.once('ready', async () => {
     client.guilds.cache.forEach(guild =>{
@@ -27,7 +43,7 @@ client.once('ready', async () => {
     });
 });
 
-
+//Event Handler
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
 	const event = require(`./events/${file}`);
@@ -38,14 +54,18 @@ for (const file of eventFiles) {
 	}
 }
 
-//this checks for if a new user is a partner, because yes
+//this checks if the new user matches the badge criteria
 client.on("guildMemberAdd", async (member) => {
-    console.log(`${member.displayName} joined the guild.`);
     const badges = member.user.flags.toArray()
     if (!badges.includes("PARTNERED_SERVER_OWNER")) {
        const cachedInvites = guildInvites.get(member.guild.id);
        const newInvites = await member.guild.fetchInvites();
        guildInvites.set(member.guild.id, newInvites);
+       const nonPartnerEmbedDM = new Discord.MessageEmbed()
+       .setTitle(`<:warning:847512140557320232> Non-Partner Join`)
+       .setDescription(`Hello ${member.displayName}!\nUnfortunately we had to kick you from the **${member.guild.name} Server** since you are not a Discord Partner.\nIf you would like to know more about the Discord Partner Program, you can read up about it here; <https://discord.com/partners/>`)
+       .setImage('https://cdn.discordapp.com/attachments/756644176795533334/847276996564353054/Embed_width.png')
+       .setColor('#E63C3C')
        try {
         const usedInvite = newInvites.find(inv => cachedInvites.get(inv.code).uses <inv.uses);
         const nonPartnerEmbed = new Discord.MessageEmbed()
@@ -55,27 +75,23 @@ client.on("guildMemberAdd", async (member) => {
         .setColor('#E63C3C')
 	    .setTimestamp()
 	    .setFooter('Attempted:');
-        const nonPartnerEmbedDM = new Discord.MessageEmbed()
-        .setTitle(`<:warning:847512140557320232> Non-Partner Join`)
-        .setDescription(`Hello ${member.displayName}!\nUnfortunately we had to kick you from the **Cool Discord Partners Server** since you are not a Discord Partner.\nIf you would like to know more about the Discord Partner Program, you can read up about it here; <https://discord.com/partners/>`)
-        .setImage('https://cdn.discordapp.com/attachments/756644176795533334/847276996564353054/Embed_width.png')
-        .setColor('#E63C3C')
         member.send(nonPartnerEmbedDM)
-        client.channels.cache.get('847531207482802176').send(nonPartnerEmbed);
+        client.channels.cache.get(logChannelID).send(nonPartnerEmbed);
         try {
             await wait(1000);
             member.kick();
         }catch(err){
-            client.channels.cache.get('847531207482802176').send(`<@847442076911534171> failed to kick ${member.user.tag} (${member.id})`);
+            client.channels.cache.get(logChannelID).send(`<@847442076911534171> failed to kick ${member.user.tag} (${member.id})`);
         }
        }catch(err){
+            member.send(nonPartnerEmbedDM)
             try {
                 await wait(1000);
                 member.kick();
             }catch(err){
-            client.channels.cache.get('847531207482802176').send(`<@847442076911534171> failed to kick ${member.user.tag} (${member.id})`);
-        }
-           console.log(err);
+                client.channels.cache.get(logChannelID).send(`<@847442076911534171> failed to kick ${member.user.tag} (${member.id})`);
+            }
+            client.channels.cache.get(logChannelID).send(`kicked ${member.user.tag} (${member.id}) who joined using a brand new invite! Check the Audit Logs!`);
        }
     }else{
         member.roles.add('847442832985423872')

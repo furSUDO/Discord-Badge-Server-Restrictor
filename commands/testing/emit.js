@@ -1,7 +1,7 @@
 const Discord = require('discord.js');
 module.exports = {
-	name: 'emit',
-	description: 'Display info about this server.',
+	name: 'test',
+	description: 'Display a welcome message.',
 	execute(client) {
 		const PartnerEmbed = new Discord.MessageEmbed()
             .setTitle(`<a:partner:847512016171565067> A new Partner has arrived!`)
